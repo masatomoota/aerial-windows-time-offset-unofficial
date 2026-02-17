@@ -1,5 +1,5 @@
 {
-  "name": "aerial",
+  "name": "aerial_masatomo",
   "version": "1.2.1",
   "videoJSONVersion": "1.15.0",
   "description": "Apple TV screen saver for Windows",
@@ -40,7 +40,7 @@
       "perMachine": false
     },
     "portable": {
-      "artifactName": "aerial.exe",
+      "artifactName": "Aerial_masatomo.exe",
       "useZip": true
     },
     "files": [
@@ -48,6 +48,6 @@
       "!images/*"
     ],
     "icon": "icon.ico",
-    "productName": "Aerial"
+    "productName": "Aerial_masatomo"
   }
 }

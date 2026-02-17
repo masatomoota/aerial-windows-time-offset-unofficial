@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require("path");
 const AutoLaunch = require('auto-launch');
 let autoLauncher = new AutoLaunch({
-    name: 'Aerial',
+    name: 'Aerial_masatomo',
 });
 const SunCalc = require('suncalc');
 
@@ -463,6 +463,7 @@ function setUpConfigFile() {
     }
     //time & location settings
     store.set('timeOfDay', store.get('timeOfDay') ?? false);
+    store.set('timeOffsetMinutes', Number(store.get('timeOffsetMinutes')) || 0);
     store.set('sunrise', store.get('sunrise') ?? "06:00");
     store.set('sunset', store.get('sunset') ?? "18:00");
     store.set('useLocationForSunrise', store.get('useLocationForSunrise') ?? false);

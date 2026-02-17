@@ -161,6 +161,11 @@
                         <input style="width: 15%; display: inline !important;" class="w3-input" type="time" id="sunset"
                                onchange="updateSetting('sunset','time')">
                     </div>
+                    <br>
+                    <label for="timeOffsetMinutes">Displayed time offset:</label>
+                    <input style="width: 10%; display: inline !important;" class="w3-input" type="number"
+                           id="timeOffsetMinutes" step="1" onchange="updateSetting('timeOffsetMinutes','number')">
+                    minutes
                     <hr>
                     <input type="checkbox" id="useLocationForSunrise" class="w3-check"
                            onclick="updateSetting('useLocationForSunrise','check')">
