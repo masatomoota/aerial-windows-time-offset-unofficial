@@ -28,3 +28,13 @@
 1. `upstream` リモートを保持する: `https://github.com/OrangeJedi/Aerial.git`
 2. 定期的に上流を fetch し、意図を持って merge/rebase する。
 3. フォーク独自仕様のために解消した競合は記録を残す。
+
+### 1コマンド同期ヘルパー
+`origin/master` から上流同期用ブランチを分け、分離された worktree で取り込むスクリプトを使えます。
+
+```bash
+scripts/sync_upstream.sh --push
+```
+
+- 既定ブランチ名: `chore/sync-upstream-YYYYMMDD`
+- 競合が出た場合は一時 worktree を保持し、解消手順を表示します。

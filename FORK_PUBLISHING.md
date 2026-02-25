@@ -28,3 +28,13 @@ Note: GitHub repository names cannot include spaces.
 1. Keep `upstream` remote configured: `https://github.com/OrangeJedi/Aerial.git`
 2. Regularly fetch upstream and merge/rebase intentionally.
 3. Document conflict resolutions when fork behavior intentionally diverges.
+
+### One-command sync helper
+Use the helper script to create an upstream-sync branch from `origin/master` in an isolated worktree:
+
+```bash
+scripts/sync_upstream.sh --push
+```
+
+- Default branch name: `chore/sync-upstream-YYYYMMDD`
+- If merge conflicts occur, the script keeps the temporary worktree path and prints recovery steps.
