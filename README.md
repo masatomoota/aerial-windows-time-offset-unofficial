@@ -2,13 +2,16 @@
     <img alt="" src="/images/surface_preview.gif" />
 </p>
 <p align="center">
+  <strong>Language:</strong>
+  <a href="./README.md">English</a> |
+  <a href="./README.ja.md">日本語</a>
+</p>
+<p align="center">
     <img alt="Platform Windows" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square" />
     <img alt="Fork type" src="https://img.shields.io/badge/fork-unofficial-orange?style=flat-square" />
 </p>
 
 # Aerial for Windows Time Offset (Unofficial)
-
-Japanese documentation is available at [README.ja.md](./README.ja.md).
 
 This repository is an unofficial fork of [OrangeJedi/Aerial](https://github.com/OrangeJedi/Aerial), a Windows screen saver that mimics Apple's Apple TV screen saver.
 
