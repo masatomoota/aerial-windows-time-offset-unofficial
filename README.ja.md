@@ -2,13 +2,16 @@
     <img alt="" src="/images/surface_preview.gif" />
 </p>
 <p align="center">
+  <strong>言語:</strong>
+  <a href="./README.ja.md">日本語</a> |
+  <a href="./README.md">English</a>
+</p>
+<p align="center">
     <img alt="Platform Windows" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square" />
     <img alt="Fork type" src="https://img.shields.io/badge/fork-unofficial-orange?style=flat-square" />
 </p>
 
 # Aerial for Windows Time Offset (Unofficial)
-
-英語版ドキュメントは [README.md](./README.md) にあります。
 
 このリポジトリは、Windows向けスクリーンセーバー [OrangeJedi/Aerial](https://github.com/OrangeJedi/Aerial) の非公式フォークです。
 
