@@ -320,6 +320,29 @@
                     <label for="videoQuality">Disable all video processing</label>
                     <br>
                     <hr>
+                    <h4>Import / Export Settings</h4>
+                    <p class="w3-small" style="margin-left: 4%">
+                        Import from or export to another installed Aerial. Each installation keeps its own cache
+                        location and temporary state.
+                    </p>
+                    <select id="importSourceSelect" style="width: 100%; max-width: 700px;"
+                            onchange="updateImportSourceDetails()"></select>
+                    <p class="w3-small" id="importSourceDetails" style="margin-left: 4%; word-break: break-all;"></p>
+                    <button class="w3-button w3-white w3-border w3-border-blue w3-round-large"
+                            onclick="refreshImportSources()">
+                        Refresh List
+                    </button>
+                    <button class="w3-button w3-white w3-border w3-border-green w3-round-large"
+                            id="importSettingsButton"
+                            onclick="importSettingsFromAnotherAerial()">
+                        Import Selected Settings
+                    </button>
+                    <button class="w3-button w3-white w3-border w3-border-orange w3-round-large"
+                            id="exportSettingsButton"
+                            onclick="exportSettingsToAnotherAerial()">
+                        Export Current Settings
+                    </button>
+                    <hr>
                     <button class="w3-button w3-white w3-border w3-border-blue w3-round-large"
                             style="font-size: small"
                             onclick="electron.ipcRenderer.send('openConfigFolder');">

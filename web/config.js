@@ -6,9 +6,19 @@ let downloadedVideos = electron.store.get("downloadedVideos");
 let alwaysDownloadVideos = electron.store.get("alwaysDownloadVideos");
 let neverDownloadVideos = electron.store.get("neverDownloadVideos");
 let customVideos = electron.store.get("customVideos");
+let importSources = [];
+
+function syncStoreBackedCollections() {
+    allowedVideos = electron.store.get("allowedVideos") ?? [];
+    downloadedVideos = electron.store.get("downloadedVideos") ?? [];
+    alwaysDownloadVideos = electron.store.get("alwaysDownloadVideos") ?? [];
+    neverDownloadVideos = electron.store.get("neverDownloadVideos") ?? [];
+    customVideos = electron.store.get("customVideos") ?? [];
+}
 
 //Updates all the <input> tags with their proper values. Called on page load
 function displaySettings() {
+    syncStoreBackedCollections();
     let checked = ["timeOfDay", "skipVideosWithKey", "sameVideoOnScreens", "videoCache", "videoCacheProfiles", "videoCacheRemoveUnallowed", "avoidDuplicateVideos", "onlyShowVideoOnPrimaryMonitor", "videoQuality", "immediatelyUpdateVideoCache", "useTray", "blankScreen", "sleepAfterBlank", "lockAfterRun", "alternateRenderMethod", "useLocationForSunrise", "runOnBattery", "enableGlobalShortcut"];
     for (let i = 0; i < checked.length; i++) {
         $(`#${checked[i]}`).prop('checked', electron.store.get(checked[i]));
@@ -32,6 +42,7 @@ function displaySettings() {
     }
     displayPlaybackSettings();
     displayCustomVideos();
+    loadScreenSelect();
     colorTextPositionRadio();
     updateSettingVisibility();
 
@@ -40,10 +51,139 @@ function displaySettings() {
     if (electron.store.get('updateAvailable') !== false) {
         document.getElementById(`aboutUpdate`).style.display = "";
         document.getElementById(`updateBadge`).style.display = "";
+    } else {
+        document.getElementById(`aboutUpdate`).style.display = "none";
+        document.getElementById(`updateBadge`).style.display = "none";
     }
 }
 
 displaySettings();
+refreshImportSources();
+
+async function refreshImportSources(selectedPath) {
+    const select = document.getElementById('importSourceSelect');
+    const importButton = document.getElementById('importSettingsButton');
+    const exportButton = document.getElementById('exportSettingsButton');
+    const details = document.getElementById('importSourceDetails');
+
+    select.innerHTML = "";
+    const loadingOption = document.createElement('option');
+    loadingOption.textContent = "Loading installed Aerial settings...";
+    select.appendChild(loadingOption);
+    select.disabled = true;
+    importButton.disabled = true;
+    exportButton.disabled = true;
+    details.innerText = "";
+
+    try {
+        importSources = await electron.ipcRenderer.invoke('listImportableConfigs');
+        renderImportSources(selectedPath);
+    } catch (error) {
+        importSources = [];
+        select.innerHTML = "";
+        const errorOption = document.createElement('option');
+        errorOption.textContent = "Unable to load other Aerial installs";
+        select.appendChild(errorOption);
+        select.disabled = true;
+        importButton.disabled = true;
+        exportButton.disabled = true;
+        details.innerText = error && error.message ? error.message : "Unable to read other Aerial settings.";
+    }
+}
+
+function renderImportSources(selectedPath) {
+    const select = document.getElementById('importSourceSelect');
+    const importButton = document.getElementById('importSettingsButton');
+    const exportButton = document.getElementById('exportSettingsButton');
+    const details = document.getElementById('importSourceDetails');
+
+    select.innerHTML = "";
+    if (importSources.length === 0) {
+        const emptyOption = document.createElement('option');
+        emptyOption.textContent = "No other installed Aerial settings found";
+        select.appendChild(emptyOption);
+        select.disabled = true;
+        importButton.disabled = true;
+        exportButton.disabled = true;
+        details.innerText = "Aerial config.json files in other AppData folders were not found.";
+        return;
+    }
+
+    importSources.forEach((source, index) => {
+        const option = document.createElement('option');
+        option.value = source.configPath;
+        const updatedAt = source.updatedAt ? new Date(source.updatedAt).toLocaleString() : null;
+        option.textContent = updatedAt ? `${source.name} (${updatedAt})` : source.name;
+        if (selectedPath ? source.configPath === selectedPath : index === 0) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+
+    select.disabled = false;
+    importButton.disabled = false;
+    exportButton.disabled = false;
+    updateImportSourceDetails();
+}
+
+function updateImportSourceDetails() {
+    const details = document.getElementById('importSourceDetails');
+    const selectedPath = document.getElementById('importSourceSelect').value;
+    const selectedSource = importSources.find((source) => source.configPath === selectedPath);
+
+    if (!selectedSource) {
+        details.innerText = "";
+        return;
+    }
+
+    const updatedAt = selectedSource.updatedAt ? new Date(selectedSource.updatedAt).toLocaleString() : "Unknown";
+    details.innerText = `${selectedSource.configPath} | Last updated: ${updatedAt}`;
+}
+
+async function importSettingsFromAnotherAerial() {
+    const selectedPath = document.getElementById('importSourceSelect').value;
+    const selectedSource = importSources.find((source) => source.configPath === selectedPath);
+
+    if (!selectedPath || !selectedSource) {
+        alert("Select an Aerial install to import from.");
+        return;
+    }
+
+    if (!confirm(`Import settings from ${selectedSource.name}?\nThis keeps this installation's cache location and temporary state.`)) {
+        return;
+    }
+
+    try {
+        const result = await electron.ipcRenderer.invoke('importSettingsFromConfig', selectedPath);
+        displaySettings();
+        await refreshImportSources(selectedPath);
+        alert(`Imported ${result.importedKeyCount} settings from ${result.name}.`);
+    } catch (error) {
+        alert(error && error.message ? error.message : "Unable to import settings from the selected Aerial install.");
+    }
+}
+
+async function exportSettingsToAnotherAerial() {
+    const selectedPath = document.getElementById('importSourceSelect').value;
+    const selectedSource = importSources.find((source) => source.configPath === selectedPath);
+
+    if (!selectedPath || !selectedSource) {
+        alert("Select an Aerial install to export to.");
+        return;
+    }
+
+    if (!confirm(`Export current settings to ${selectedSource.name}?\nThis keeps the target install's cache location and temporary state.`)) {
+        return;
+    }
+
+    try {
+        const result = await electron.ipcRenderer.invoke('exportSettingsToConfig', selectedPath);
+        await refreshImportSources(selectedPath);
+        alert(`Exported ${result.exportedKeyCount} settings to ${result.name}.\nRestart that Aerial instance if it is already running.`);
+    } catch (error) {
+        alert(error && error.message ? error.message : "Unable to export settings to the selected Aerial install.");
+    }
+}
 
 function displayPlaybackSettings() {
     let settings = electron.store.get('videoFilters');
@@ -376,8 +516,6 @@ function loadScreenSelect() {
     }
     $('#screenSelectorSelect').html(html);
 }
-
-loadScreenSelect();
 
 //handles selecting a radio button from the position image
 function positionSelect(position) {

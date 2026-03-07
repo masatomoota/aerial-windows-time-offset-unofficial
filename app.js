@@ -49,6 +49,16 @@ let astronomy = {
     "moonset": undefined,
     "calculated": false
 };
+const IMPORT_SETTINGS_EXCLUDED_KEYS = new Set([
+    "astronomy",
+    "cachePath",
+    "configured",
+    "downloadedVideos",
+    "numDisplays",
+    "updateAvailable",
+    "version",
+    "videoCacheSize"
+]);
 let admin = false;
 exec('NET SESSION', function (err, so, se) {
     if (se.length === 0) {
@@ -514,6 +524,150 @@ function setUpConfigFile() {
     store.set("configured", true);
 }
 
+function formatTimeValue(date) {
+    return `${date.getHours() < 10 ? '0' : ""}${date.getHours()}:${date.getMinutes() < 10 ? '0' : ""}${date.getMinutes()}`
+}
+
+function syncAstronomyToStore() {
+    calculateAstronomy();
+    store.set('astronomy', astronomy);
+    if (store.get('useLocationForSunrise') && astronomy.calculated) {
+        store.set('sunrise', formatTimeValue(astronomy.sunrise));
+        store.set('sunset', formatTimeValue(astronomy.sunset));
+    }
+}
+
+function getImportableConfigSources() {
+    const appDataPath = app.getPath('appData');
+    const currentUserDataPath = path.resolve(app.getPath('userData'));
+    const currentConfigPath = path.resolve(path.join(app.getPath('userData'), "config.json"));
+    return fs.readdirSync(appDataPath, {withFileTypes: true})
+        .filter((entry) => entry.isDirectory() && /aerial/i.test(entry.name))
+        .map((entry) => {
+            const dirPath = path.join(appDataPath, entry.name);
+            const configPath = path.join(dirPath, "config.json");
+            return {
+                configPath,
+                dirPath,
+                name: entry.name
+            };
+        })
+        .filter((entry) => {
+            return fs.existsSync(entry.configPath)
+                && path.resolve(entry.dirPath) !== currentUserDataPath
+                && path.resolve(entry.configPath) !== currentConfigPath;
+        })
+        .map((entry) => {
+            const stat = fs.statSync(entry.configPath);
+            return {
+                configPath: entry.configPath,
+                name: entry.name,
+                updatedAt: stat.mtime.toISOString()
+            };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function getTransferableSettingsSnapshot() {
+    syncAstronomyToStore();
+    const currentConfig = store.store && typeof store.store === "object" ? store.store : {};
+    const transferableSettings = {};
+
+    Object.entries(currentConfig).forEach(([key, value]) => {
+        if (!IMPORT_SETTINGS_EXCLUDED_KEYS.has(key)) {
+            transferableSettings[key] = value;
+        }
+    });
+
+    return transferableSettings;
+}
+
+function importSettingsFromConfigFile(configPath) {
+    const resolvedConfigPath = path.resolve(configPath);
+    if (!fs.existsSync(resolvedConfigPath)) {
+        throw new Error("The selected Aerial config file could not be found.");
+    }
+
+    let importedConfig;
+    try {
+        importedConfig = JSON.parse(fs.readFileSync(resolvedConfigPath, "utf8"));
+    } catch (error) {
+        throw new Error("The selected Aerial config file is not valid JSON.");
+    }
+
+    if (!importedConfig || typeof importedConfig !== "object" || Array.isArray(importedConfig)) {
+        throw new Error("The selected Aerial config file does not contain settings.");
+    }
+
+    let importedKeyCount = 0;
+    Object.entries(importedConfig).forEach(([key, value]) => {
+        if (!IMPORT_SETTINGS_EXCLUDED_KEYS.has(key)) {
+            store.set(key, value);
+            importedKeyCount++;
+        }
+    });
+
+    if (importedKeyCount === 0) {
+        throw new Error("No importable settings were found in the selected Aerial config file.");
+    }
+
+    syncAstronomyToStore();
+    setUpConfigFile();
+    cachePath = store.get('cachePath') ?? path.join(app.getPath('userData'), "videos");
+    allowedVideos = store.get("allowedVideos");
+    setupGlobalShortcut();
+    if (store.get('useTray') && app.isPackaged) {
+        autoLauncher.enable();
+    } else {
+        autoLauncher.disable();
+    }
+    updateCustomVideos();
+    if (store.get('videoCacheRemoveUnallowed')) {
+        removeAllUnallowedVideosInCache();
+    }
+    removeAllNeverAllowedVideosInCache();
+
+    return {
+        importedKeyCount,
+        name: path.basename(path.dirname(resolvedConfigPath))
+    };
+}
+
+function exportSettingsToConfigFile(configPath) {
+    const resolvedConfigPath = path.resolve(configPath);
+    const currentConfigPath = path.resolve(path.join(app.getPath('userData'), "config.json"));
+    if (resolvedConfigPath === currentConfigPath) {
+        throw new Error("The current Aerial install cannot be selected as an export target.");
+    }
+    if (!fs.existsSync(resolvedConfigPath)) {
+        throw new Error("The selected Aerial config file could not be found.");
+    }
+
+    let targetConfig;
+    try {
+        targetConfig = JSON.parse(fs.readFileSync(resolvedConfigPath, "utf8"));
+    } catch (error) {
+        throw new Error("The selected Aerial config file is not valid JSON.");
+    }
+
+    if (!targetConfig || typeof targetConfig !== "object" || Array.isArray(targetConfig)) {
+        throw new Error("The selected Aerial config file does not contain settings.");
+    }
+
+    const transferableSettings = getTransferableSettingsSnapshot();
+    const mergedConfig = {
+        ...targetConfig,
+        ...transferableSettings
+    };
+
+    fs.writeFileSync(resolvedConfigPath, `${JSON.stringify(mergedConfig, null, "\t")}\n`, "utf8");
+
+    return {
+        exportedKeyCount: Object.keys(transferableSettings).length,
+        name: path.basename(path.dirname(resolvedConfigPath))
+    };
+}
+
 //setUpConfigFile();
 
 //check for update on GitHub
@@ -673,12 +827,22 @@ ipcMain.on('resetConfig', (event) => {
 });
 
 ipcMain.on('updateLocation', (event) => {
-    calculateAstronomy();
+    syncAstronomyToStore();
     if (astronomy.calculated) {
-        store.set('sunrise', (astronomy.sunrise.getHours() < 10 ? '0' : "") + astronomy.sunrise.getHours() + ':' + (astronomy.sunrise.getMinutes() < 10 ? '0' : "") + astronomy.sunrise.getMinutes());
-        store.set('sunset', (astronomy.sunset.getHours() < 10 ? '0' : "") + astronomy.sunset.getHours() + ':' + (astronomy.sunset.getMinutes() < 10 ? '0' : "") + astronomy.sunset.getMinutes());
         event.reply('displaySettings');
     }
+});
+
+ipcMain.handle('listImportableConfigs', () => {
+    return getImportableConfigSources();
+});
+
+ipcMain.handle('importSettingsFromConfig', (event, configPath) => {
+    return importSettingsFromConfigFile(configPath);
+});
+
+ipcMain.handle('exportSettingsToConfig', (event, configPath) => {
+    return exportSettingsToConfigFile(configPath);
 });
 
 ipcMain.handle('newVideoId', (event, lastPlayed) => {
@@ -778,7 +942,7 @@ function updateCustomVideos() {
                 }
             });
             if (index === -1) {
-                allowedVideos.splice(index, 1);
+                allowedVideos.splice(i, 1);
                 i--;
             }
         }

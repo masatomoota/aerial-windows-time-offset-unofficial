@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld("electron", {
             },
             // From render to main and back again.
             invoke: (channel, args) => {
-                let validChannels = ["newVideoId"];
+                let validChannels = ["exportSettingsToConfig", "importSettingsFromConfig", "listImportableConfigs", "newVideoId"];
                 if (validChannels.includes(channel)) {
                     return ipcRenderer.invoke(channel, args);
                 }
