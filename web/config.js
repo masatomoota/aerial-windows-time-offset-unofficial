@@ -13,7 +13,7 @@ function displaySettings() {
     for (let i = 0; i < checked.length; i++) {
         $(`#${checked[i]}`).prop('checked', electron.store.get(checked[i]));
     }
-    let numTxt = ["sunrise", "sunset", "textFont", "textSize", "textColor", "startAfter", "blankAfter", "fps", "latitude", "longitude", "randomSpeed", "skipKey", "transitionType", "fillMode", "globalShortcutModifier1", "globalShortcutModifier2", "globalShortcutKey", "lockAfterRunAfter", "videoFileType"];
+    let numTxt = ["sunrise", "sunset", "timeOffsetMinutes", "textFont", "textSize", "textColor", "startAfter", "blankAfter", "fps", "latitude", "longitude", "randomSpeed", "skipKey", "transitionType", "fillMode", "globalShortcutModifier1", "globalShortcutModifier2", "globalShortcutKey", "lockAfterRunAfter", "videoFileType"];
     for (let i = 0; i < numTxt.length; i++) {
         $(`#${numTxt[i]}`).val(electron.store.get(numTxt[i]));
     }
@@ -447,8 +447,8 @@ function updatePositionType(position, line) {
         case "time":
             displayTextSettings[position][line].timeString = displayTextSettings[position][line].timeString ? displayTextSettings[position][line].timeString : "hh:mm:ss";
             html = `
-                                    <input class='w3-input' value='${displayTextSettings[position][line].timeString}' onchange="showMomentDisplay('positionTimeDisplay', this); updateTextSetting(this, '${position}','${line}', 'timeString')">
-                                    <span id="positionTimeDisplay">${moment().format(displayTextSettings[position][line].timeString)}</span>
+                                    <input class='w3-input' value='${displayTextSettings[position][line].timeString}' onchange="showMomentDisplay('positionTimeDisplay', this, true); updateTextSetting(this, '${position}','${line}', 'timeString')">
+                                    <span id="positionTimeDisplay">${getDisplayMoment(true).format(displayTextSettings[position][line].timeString)}</span>
                                     <br>
                                     <button onclick="document.getElementById('timeFormatExplain').style.display='block'" class="w3-button w3-white w3-border w3-border-blue w3-round-large" style="margin-top: 2%">Show Formatting Details</button>`;
             break;
@@ -829,8 +829,16 @@ function displayProfile(id) {
 }
 
 //For formatting time and dates. Used throughout the config menu
-function showMomentDisplay(id, stringID) {
-    $(`#${id}`).text(moment().format(stringID.value));
+function getDisplayMoment(applyTimeOffset = false) {
+    if (!applyTimeOffset) {
+        return moment();
+    }
+    const offsetMinutes = Number(electron.store.get('timeOffsetMinutes')) || 0;
+    return moment().add(offsetMinutes, 'minutes');
+}
+
+function showMomentDisplay(id, stringID, applyTimeOffset = false) {
+    $(`#${id}`).text(getDisplayMoment(applyTimeOffset).format(stringID.value));
 }
 
 //Autocomplete stuff

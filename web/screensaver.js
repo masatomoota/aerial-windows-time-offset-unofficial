@@ -541,7 +541,8 @@ function runClock(position, line, timeString) {
     if (blackScreen) {
         return
     }
-    $(`#${position}-${line}-clock`).text(moment().format(timeString));
+    const offsetMinutes = Number(electron.store.get('timeOffsetMinutes')) || 0;
+    $(`#${position}-${line}-clock`).text(moment().add(offsetMinutes, 'minutes').format(timeString));
     displayText[position][line].clockTimeout = setTimeout(runClock, 1000 - new Date().getMilliseconds(), position, line, timeString);
 }
 
