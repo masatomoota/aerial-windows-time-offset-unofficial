@@ -26,6 +26,23 @@ let autoLauncher = new AutoLaunch({
 });
 const SunCalc = require('suncalc');
 
+function configureAutoLaunch() {
+    const shouldAutoLaunch = store.get('useTray') && app.isPackaged;
+
+    autoLauncher.isEnabled()
+        .then((isEnabled) => {
+            if (shouldAutoLaunch && !isEnabled) {
+                return autoLauncher.enable();
+            }
+            if (!shouldAutoLaunch && isEnabled) {
+                return autoLauncher.disable();
+            }
+        })
+        .catch((err) => {
+            console.warn('Unable to update auto-launch setting:', err.message ?? err);
+        });
+}
+
 //initialize variables
 let screens = [];
 let screenIds = [];
@@ -349,11 +366,7 @@ function startUp() {
     setupGlobalShortcut();
     store.set('numDisplays', screen.getAllDisplays().length);
     //configures Aerial to launch on startup
-    if (store.get('useTray') && app.isPackaged) {
-        autoLauncher.enable();
-    } else {
-        autoLauncher.disable();
-    }
+    configureAutoLaunch();
     //prevents quiting the app if wanted
     if (process.argv.includes("/nq")) {
         nq = true;
